@@ -172,11 +172,11 @@ class CCPConnection(object):
 
         # table[0] contains Zone/Serial/DNSSEC state
         dnssec = True if "checked" in str(div.find("input", {"id": "dnssecenabled_" + str(domain_id)})) else False
-        domain_obj = CCPDomain(domain_id=domain_id,
-                              name=div.find("input", {"name": "zone"}).get("value"),
-                              zone=div.find("input", {"name": "zoneid"}).get("value"),
-                              serial=div.find("input", {"name": "serial"}).get("value"),
-                              dnssec=dnssec)
+        domain_obj = CCPDomain(domain_id     = domain_id,
+                               domain_name   = div.find("input", {"name": "zone"}).get("value"),
+                               domain_zone   = div.find("input", {"name": "zoneid"}).get("value"),
+                               domain_serial = div.find("input", {"name": "serial"}).get("value"),
+                               domain_dnssec = dnssec)
 
         # for very dns entry
         for row in table[1].find_all("tr")[1:-2]:
@@ -193,7 +193,7 @@ class CCPConnection(object):
                     break
 
             # if record contain values
-            if host:
+            if rr_host:
                 domain_obj.addRecord(rr_host, rr_type, rr_destination, rr_pri, column[0].input.get("name")[:-6])
 
         return domain_obj
