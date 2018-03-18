@@ -90,8 +90,15 @@ class CCPDomain(object):
         Removes resource record
         """
 
+        if "new[" in id:
+            # delete new enty
+            self._rr.pop(id, False)
+        else:
+            # delete entry on server
+            self._rr[id]["delete"] = id[7:-1]
+
         self._changed = True
-        return self._rr.pop(id, False)
+        return True
 
 
     def getDNSSEC(self):

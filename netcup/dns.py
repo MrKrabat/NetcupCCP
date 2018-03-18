@@ -220,6 +220,8 @@ class CCPConnection(object):
             payload[key + "[type]"] = value["type"]
             payload[key + "[pri]"] = value["pri"]
             payload[key + "[destination]"] = value["destination"]
+            if "delete" in value:
+                payload[key + "[delete]"] = value["delete"]
 
         # send update
         payload = urlencode(payload)
