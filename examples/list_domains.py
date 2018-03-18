@@ -27,8 +27,7 @@ ccp = netcup.dns.CCPConnection(cachepath="mysession", debug=False)
 ccp.start(username="<CCP NAME>", password="<CCP PASSWORD>")
 
 # print all domains
-print("Print all domains:")
-for key, value in ccp.getAllDomains(search="", page=1).items():
+for key, value in ccp.getAllDomains().items():
     print(key + ": " + value)
 
 # cleanup

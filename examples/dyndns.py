@@ -41,7 +41,7 @@ else:
     mydomain.setRecord(list(dyndns.keys())[0], "dyndns", "A", "<NEW IPv4>")
 
 # save changes
-ccp.saveDomain(domainid, mydomain)
+ccp.saveDomain("<CCP DOMAIN ID>", mydomain)
 
 # cleanup
 ccp.close()

@@ -25,12 +25,9 @@ import netcup
 # start api connection
 ccp = netcup.dns.CCPConnection(cachepath="mysession", debug=False)
 ccp.start(username="<CCP NAME>", password="<CCP PASSWORD>")
-
-# get domains
-domainlist = ccp.getAllDomains(search="", page=1)
     
 # get infos of first domain
-mydomain = ccp.getDomain(list(domainlist.keys())[0])
+mydomain = ccp.getDomain("<CCP DOMAIN ID>")
 
 # print all records
 for key, value in mydomain.getAllRecords().items():

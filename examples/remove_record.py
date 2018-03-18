@@ -25,20 +25,16 @@ import netcup
 # start api connection
 ccp = netcup.dns.CCPConnection(cachepath="mysession", debug=False)
 ccp.start(username="<CCP NAME>", password="<CCP PASSWORD>")
-
-# get domains
-domainlist = ccp.getAllDomains(search="", page=1)
     
 # get infos of first domain
-domainid = list(domainlist.keys())[0]
-mydomain = ccp.getDomain(domainid)
+mydomain = ccp.getDomain("<CCP DOMAIN ID>")
 
 # remove record(s)
 for key, value in mydomain.searchRecord(host="demo", type="A").items():
     mydomain.removeRecord(key)
 
 # save changes
-ccp.saveDomain(domainid, mydomain)
+ccp.saveDomain("<CCP DOMAIN ID>", mydomain)
 
 # cleanup
 ccp.close()
