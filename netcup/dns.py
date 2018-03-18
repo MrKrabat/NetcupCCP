@@ -204,6 +204,10 @@ class CCPConnection(object):
         Saves domain object on netcup
         """
 
+        # check if object changed
+        if not domain_obj._changed:
+            return True
+
         # create post payload
         payload = {"dnssecenabled":                     str(not domain_obj.getDNSSEC()).lower(),
                    "zone":                              domain_obj._name,

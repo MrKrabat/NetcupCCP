@@ -82,6 +82,7 @@ class CCPDomain(object):
         else:
             self._rr[rr_id] = {"host": rr_host, "type": rr_type, "pri": rr_pri, "destination": rr_destination}
 
+        self._changed = True
         return True
 
 
