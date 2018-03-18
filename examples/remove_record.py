@@ -30,7 +30,7 @@ ccp.start(username="<CCP NAME>", password="<CCP PASSWORD>")
 mydomain = ccp.getDomain("<CCP DOMAIN ID>")
 
 # remove record(s)
-for key, value in mydomain.searchRecord(host="demo", type="A").items():
+for key, value in mydomain.searchRecord(rr_host="demo", rr_type="A").items():
     mydomain.removeRecord(key)
 
 # save changes

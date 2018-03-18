@@ -17,7 +17,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import time
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import netcup
 
@@ -25,6 +27,7 @@ import netcup
 Certbot command:
 certbot certonly --manual --preferred-challenges=dns --manual-auth-hook /root/authenticator.py -d domain.tld
 """
+
 
 def getNetcupDomain(fqdn):
     """
