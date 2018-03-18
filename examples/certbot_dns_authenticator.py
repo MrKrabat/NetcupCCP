@@ -17,17 +17,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import sys
 import time
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import netcup
 
 """
 Certbot command:
-certbot certonly --manual --preferred-challenges=dns --manual-auth-hook /root/authenticator.py -d domain.tld
+certbot certonly --manual --preferred-challenges=dns --manual-auth-hook /root/certbot/authenticator.py --manual-cleanup-hook /root/certbot/cleanup.py -d *.domain.tld -d domain.tld
 """
-
 
 def getNetcupDomain(fqdn):
     """
@@ -38,8 +35,8 @@ def getNetcupDomain(fqdn):
             return "_acme-challenge"
         elif value in fqdn:
             return "_acme-challenge." + fqdn[:-(len(value)+1)]
-
-
+            
+            
 def getDomainID(fqdn):
     """
     Returns domain id
@@ -61,10 +58,6 @@ CERTBOT_VALIDATION = os.environ["CERTBOT_VALIDATION"]
 
 # load domain data
 mydomain = ccp.getDomain(DOMAIN_ID)
-
-# cleanup old dns challenge
-for key, value in mydomain.searchRecord(rr_host=CERTBOT_DOMAIN, rr_type="TXT").items():
-    mydomain.removeRecord(key)
 
 # add acme challenge
 mydomain.addRecord(CERTBOT_DOMAIN, "TXT", CERTBOT_VALIDATION)
