@@ -20,9 +20,9 @@ import re
 import gzip
 from bs4 import BeautifulSoup
 try:
-    from urllib import urlencode
+    from urllib import urlencode, quote_plus
 except ImportError:
-    from urllib.parse import urlencode
+    from urllib.parse import urlencode, quote_plus
 try:
     from urllib2 import urlopen, build_opener, HTTPCookieProcessor, install_opener
 except ImportError:
@@ -137,7 +137,7 @@ class CCPConnection(object):
         """
 
         # get domain list
-        resource = self._network.open("https://ccp.netcup.net/run/domains_ajax.php?suchstrg=" + search + "&action=listdomains&seite=" + str(page) + "&sessionhash=" + self._sessionhash + "&nocsrftoken=" + self._nocsrftoken)
+        resource = self._network.open("https://ccp.netcup.net/run/domains_ajax.php?suchstrg=" + quote_plus(search) + "&action=listdomains&seite=" + str(page) + "&sessionhash=" + self._sessionhash + "&nocsrftoken=" + self._nocsrftoken)
         content = gzip.decompress(resource.read()).decode(resource.headers.get_content_charset())
         self.__getTokens(content)
         self._log("Received domain list")
