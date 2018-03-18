@@ -22,16 +22,16 @@ class CCPDomain(object):
     Class holding all informations of a domain
     """
 
-    def __init__(self, id, name, zone, serial, dnssec=True):
+    def __init__(self, domain_id, domain_name, domain_zone, domain_serial, domain_dnssec=True):
         """
         Creates domain object
         """
 
-        self._id = id
-        self._name = name
-        self._zone = zone
-        self._serial = serial
-        self._dnssec = dnssec
+        self._id = domain_id
+        self._name = domain_name
+        self._zone = domain_zone
+        self._serial = domain_serial
+        self._dnssec = domain_dnssec
         self._changed = False
         self._newcount = 0
         self._rr = {}
@@ -45,57 +45,57 @@ class CCPDomain(object):
         return self._rr
 
 
-    def getRecord(self, id):
+    def getRecord(self, rr_id):
         """
         Returns resource record for id
         """
 
-        return self._rr.get(id, False)
+        return self._rr.get(rr_id, False)
 
 
-    def setRecord(self, id, host, type, destination, pri=0):
+    def setRecord(self, rr_id, rr_host, rr_type, rr_destination, rr_pri=0):
         """
         Sets resource record data for existing entry
         """
 
         # check if id exists
-        if not self.getRecord(id):
+        if not self.getRecord(rr_id):
             return False
 
         # update values
         self._changed = True
-        self._rr[id]["host"] = host
-        self._rr[id]["type"] = type
-        self._rr[id]["pri"] = pri
-        self._rr[id]["destination"] = destination
+        self._rr[rr_id]["host"] = rr_host
+        self._rr[rr_id]["type"] = rr_type
+        self._rr[rr_id]["pri"] = rr_pri
+        self._rr[rr_id]["destination"] = rr_destination
         return True
 
 
-    def addRecord(self, host, type, destination, pri=0, id=None):
+    def addRecord(self, rr_host, rr_type, rr_destination, rr_pri=0, rr_id=None):
         """
         Creates new resource record
         """
 
-        if not id:
-            self._rr["new[" + str(self._newcount) + "]"] = {"host": host, "type": type, "pri": pri, "destination": destination}
+        if not rr_id:
+            self._rr["new[" + str(self._newcount) + "]"] = {"host": rr_host, "type": rr_type, "pri": rr_pri, "destination": rr_destination}
             self._newcount += 1
         else:
-            self._rr[id] = {"host": host, "type": type, "pri": pri, "destination": destination}
+            self._rr[rr_id] = {"host": rr_host, "type": rr_type, "pri": rr_pri, "destination": rr_destination}
 
         return True
 
 
-    def removeRecord(self, id):
+    def removeRecord(self, rr_id):
         """
         Removes resource record
         """
 
-        if "new[" in id:
+        if "new[" in rr_id:
             # delete new enty
-            self._rr.pop(id, False)
+            self._rr.pop(rr_id, False)
         else:
             # delete entry on server
-            self._rr[id]["delete"] = id[7:-1]
+            self._rr[rr_id]["delete"] = rr_id[7:-1]
 
         self._changed = True
         return True
@@ -119,14 +119,14 @@ class CCPDomain(object):
         return True
 
 
-    def searchRecord(self, host, type):
+    def searchRecord(self, rr_host, rr_type):
         """
         Returns all matching records
         """
 
         ret = {}
         for key, value in self._rr.items():
-            if value["host"] == host and value["type"] == type:
+            if value["host"] == rr_host and value["type"] == rr_type:
                 ret[key] = value
 
         return ret

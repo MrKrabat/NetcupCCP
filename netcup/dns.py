@@ -143,79 +143,79 @@ class CCPConnection(object):
         self._log("Received domain list")
 
         # parse list
-        id = re.findall(r"showDomainsDetails\((.*?)\);", content)
-        name = re.findall(r"<td>([a-zA-Z0-9-_\.äöüß]+?)\s", content)
+        domain_id = re.findall(r"showDomainsDetails\((.*?)\);", content)
+        domain_name = re.findall(r"<td>([a-zA-Z0-9-_\.äöüß]+?)\s", content)
         ret = {}
 
         # generate response
-        for i in range(len(id)):
-            ret[id[i]] = name[i]
+        for i in range(len(domain_id)):
+            ret[domain_id[i]] = domain_name[i]
 
         return ret
 
 
-    def getDomain(self, id):
+    def getDomain(self, domain_id):
         """
         Return Domain object
         """
 
         # get domain info
-        resource = self._network.open("https://ccp.netcup.net/run/domains_ajax.php?domain_id=" + str(id) + "&action=showdomainsdetails&sessionhash=" + self._sessionhash + "&nocsrftoken=" + self._nocsrftoken)
+        resource = self._network.open("https://ccp.netcup.net/run/domains_ajax.php?domain_id=" + str(domain_id) + "&action=showdomainsdetails&sessionhash=" + self._sessionhash + "&nocsrftoken=" + self._nocsrftoken)
         content = gzip.decompress(resource.read()).decode(resource.headers.get_content_charset())
         self.__getTokens(content)
         self._log("Received domain details")
 
         # parse html
         soup = BeautifulSoup(content, "html.parser")
-        div = soup.find("div", {"id": "domainsdetail_detail_dns_" + str(id)})
+        div = soup.find("div", {"id": "domainsdetail_detail_dns_" + str(domain_id)})
         table = div.find_all("table")
 
         # table[0] contains Zone/Serial/DNSSEC state
-        dnssec = True if "checked" in str(div.find("input", {"id": "dnssecenabled_" + str(id)})) else False
-        domain = CCPDomain(id=id,
-                           name=div.find("input", {"name": "zone"}).get("value"),
-                           zone=div.find("input", {"name": "zoneid"}).get("value"),
-                           serial=div.find("input", {"name": "serial"}).get("value"),
-                           dnssec=dnssec)
+        dnssec = True if "checked" in str(div.find("input", {"id": "dnssecenabled_" + str(domain_id)})) else False
+        domain_obj = CCPDomain(domain_id=domain_id,
+                              name=div.find("input", {"name": "zone"}).get("value"),
+                              zone=div.find("input", {"name": "zoneid"}).get("value"),
+                              serial=div.find("input", {"name": "serial"}).get("value"),
+                              dnssec=dnssec)
 
         # for very dns entry
         for row in table[1].find_all("tr")[1:-2]:
             column = row.find_all("td")
 
             # get values
-            host = column[0].input.get("value")
-            pri = column[2].input.get("value")
-            destination = column[3].input.get("value")
-            type = "Error"
+            rr_host = column[0].input.get("value")
+            rr_pri = column[2].input.get("value")
+            rr_destination = column[3].input.get("value")
+            rr_type = "Error"
             for option in column[1].find_all("option"):
                 if option.get("selected"):
-                    type = option.get("value")
+                    rr_type = option.get("value")
                     break
 
             # if record contain values
             if host:
-                domain.addRecord(host, type, destination, pri, column[0].input.get("name")[:-6])
+                domain_obj.addRecord(rr_host, rr_type, rr_destination, rr_pri, column[0].input.get("name")[:-6])
 
-        return domain
+        return domain_obj
 
 
-    def saveDomain(self, id, domain):
+    def saveDomain(self, domain_id, domain_obj):
         """
         Saves domain object on netcup
         """
 
         # create post payload
-        payload = {"dnssecenabled":              str(not domain.getDNSSEC()).lower(),
-                   "zone":                       domain._name,
-                   "zoneid":                     domain._zone,
-                   "serial":                     domain._serial,
-                   "order":                      "",
-                   "formchanged":                "",
-                   "restoredefaults_" + str(id): "false",
-                   "submit":                     "DNS Records speichern"}
+        payload = {"dnssecenabled":                     str(not domain_obj.getDNSSEC()).lower(),
+                   "zone":                              domain_obj._name,
+                   "zoneid":                            domain_obj._zone,
+                   "serial":                            domain_obj._serial,
+                   "order":                             "",
+                   "formchanged":                       "",
+                   "restoredefaults_" + str(domain_id): "false",
+                   "submit":                            "DNS Records speichern"}
 
         # add dns records to payload
-        for key, value in domain.getAllRecords().items():
+        for key, value in domain_obj.getAllRecords().items():
             payload[key + "[host]"] = value["host"]
             payload[key + "[type]"] = value["type"]
             payload[key + "[pri]"] = value["pri"]
@@ -225,7 +225,7 @@ class CCPConnection(object):
 
         # send update
         payload = urlencode(payload)
-        resource = self._network.open("https://ccp.netcup.net/run/domains_ajax.php?action=editzone&domain_id=" + str(id) + "&sessionhash=" + self._sessionhash + "&nocsrftoken=" + self._nocsrftoken,
+        resource = self._network.open("https://ccp.netcup.net/run/domains_ajax.php?action=editzone&domain_id=" + str(domain_id) + "&sessionhash=" + self._sessionhash + "&nocsrftoken=" + self._nocsrftoken,
                                       payload.encode("utf-8"))
         content = gzip.decompress(resource.read()).decode(resource.headers.get_content_charset())
         self.__getTokens(content)

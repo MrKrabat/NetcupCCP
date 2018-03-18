@@ -25,7 +25,7 @@ import netcup
 # start api connection
 ccp = netcup.dns.CCPConnection(cachepath="mysession", debug=False)
 ccp.start(username="<CCP NAME>", password="<CCP PASSWORD>")
-    
+
 # get domain infos
 mydomain = ccp.getDomain("<CCP DOMAIN ID>")
 
