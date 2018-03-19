@@ -101,6 +101,10 @@ class CCPConnection(object):
             resource = self._network.open("https://ccp.netcup.net/run/domains.php")
             content = decompress(resource.read()).decode(resource.headers.get_content_charset())
             self.__getTokens(content)
+
+            if not self._sessionhash or not self._nocsrftoken:
+                raise NetcupLoginError()
+
             return True
         else:
             raise NetcupLoginError()
