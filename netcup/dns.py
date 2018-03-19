@@ -18,19 +18,11 @@
 
 import re
 import gzip
+import base64
 from bs4 import BeautifulSoup
-try:
-    from urllib import urlencode, quote_plus
-except ImportError:
-    from urllib.parse import urlencode, quote_plus
-try:
-    from urllib2 import urlopen, build_opener, HTTPCookieProcessor, install_opener
-except ImportError:
-    from urllib.request import urlopen, build_opener, HTTPCookieProcessor, install_opener
-try:
-    from cookielib import LWPCookieJar
-except ImportError:
-    from http.cookiejar import LWPCookieJar
+from urllib.parse import urlencode, quote_plus
+from urllib.request import urlopen, build_opener, HTTPCookieProcessor, install_opener
+from http.cookiejar import LWPCookieJar
 
 try:
     from domain import CCPDomain
@@ -74,7 +66,7 @@ class CCPConnection(object):
                 self._log("Could not load cache, maybe does not exists yet")
 
 
-    def start(self, username, password):
+    def start(self, username, password, token_2FA=None):
         """
         Performs login if session is invalid
         """
@@ -97,9 +89,15 @@ class CCPConnection(object):
                    "ccp_password": password,
                    "language":     "DE",
                    "login":        "Login / Anmelden"}
-        payload = urlencode(payload)
+
+        # 2FA Auth
+        if token_2FA:
+            payload.pop("ccp_password", False)
+            payload["pwdb64"] = base64.b64encode(password.encode("ascii"))
+            payload["tan"] = str(token_2FA)
 
         # send login
+        payload = urlencode(payload)
         resource = self._network.open("https://ccp.netcup.net/run/start.php", payload.encode("utf-8"))
         content = gzip.decompress(resource.read()).decode(resource.headers.get_content_charset())
 

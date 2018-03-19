@@ -5,12 +5,14 @@
 **Requirements:**
 - Python3
 - Beautifulsoup4 `apt-get install python3-bs4`
+- [Python One-Time Password Library for 2FA](https://github.com/pyotp/pyotp)
 
 **WARNING: Use at your own risk!**
 ***
 
 **Features:**
-- [x] CCP Login (2FA not supportet!)
+- [x] CCP login
+- [x] 2FA supported
 - [x] Session caching
 - [x] List and filter all domains
 - [x] Get all resource records of domain
