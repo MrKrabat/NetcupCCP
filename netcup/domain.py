@@ -89,14 +89,17 @@ class CCPDomain(object):
         Creates new resource record
         """
 
+        new_id = False
         if not rr_id:
-            self._rr["new[" + str(self._newcount) + "]"] = {"host": rr_host, "type": rr_type, "pri": rr_pri, "destination": rr_destination}
+            new_id = "new[" + str(self._newcount) + "]"
+            self._rr[new_id] = {"host": rr_host, "type": rr_type, "pri": rr_pri, "destination": rr_destination}
             self._newcount += 1
         else:
+            new_id = rr_id
             self._rr[rr_id] = {"host": rr_host, "type": rr_type, "pri": rr_pri, "destination": rr_destination}
 
         self._changed = True
-        return True
+        return new_id
 
 
     def removeRecord(self, rr_id):
