@@ -16,12 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
-import gzip
-import base64
+from re import search, findall
 from bs4 import BeautifulSoup
+from gzip import decompress
+from base64 import b64encode
 from urllib.parse import urlencode, quote_plus
-from urllib.request import urlopen, build_opener, HTTPCookieProcessor, install_opener
+from urllib.request import build_opener, HTTPCookieProcessor
 from http.cookiejar import LWPCookieJar
 
 try:
@@ -60,10 +60,9 @@ class CCPConnection(object):
             # load cookies
             try:
                 self._jar.load(cachepath, ignore_discard=True)
-                self._log("Loaded cache successful")
             except IOError:
                 # cookie file does not exist
-                self._log("Could not load cache, maybe does not exists yet")
+                pass
 
 
     def start(self, username, password, token_2FA=None):
@@ -74,13 +73,10 @@ class CCPConnection(object):
         # validate cached session
         if self._cache:
             resource = self._network.open("https://ccp.netcup.net/run/domains.php")
-            content = gzip.decompress(resource.read()).decode(resource.headers.get_content_charset())
+            content = decompress(resource.read()).decode(resource.headers.get_content_charset())
             if username in content:
-                self._log("Session still valid")
                 self.__getTokens(content)
                 return True
-            else:
-                self._log("Session has expired")
 
         # create login post
         payload = {"action":       "login",
@@ -93,20 +89,18 @@ class CCPConnection(object):
         # 2FA Auth
         if token_2FA:
             payload.pop("ccp_password", False)
-            payload["pwdb64"] = base64.b64encode(password.encode("ascii"))
+            payload["pwdb64"] = b64encode(password.encode("ascii"))
             payload["tan"] = str(token_2FA)
 
         # send login
         payload = urlencode(payload)
         resource = self._network.open("https://ccp.netcup.net/run/start.php", payload.encode("utf-8"))
-        content = gzip.decompress(resource.read()).decode(resource.headers.get_content_charset())
+        content = decompress(resource.read()).decode(resource.headers.get_content_charset())
 
         # check if login successful
         if username in content:
             resource = self._network.open("https://ccp.netcup.net/run/domains.php")
-            content = gzip.decompress(resource.read()).decode(resource.headers.get_content_charset())
-
-            self._log("Login successful")
+            content = decompress(resource.read()).decode(resource.headers.get_content_charset())
             self.__getTokens(content)
             return True
         else:
@@ -121,28 +115,25 @@ class CCPConnection(object):
         # check if caching is enabled
         if self._cache:
             # save session
-            self._log("Saving session to disk")
             self._jar.save(self._cachepath, ignore_discard=True)
         else:
             # logout
-            self._log("Performing logout")
             self._network.open("https://ccp.netcup.net/run/logout.php")
 
 
-    def getAllDomains(self, search="", page=1):
+    def getDomainList(self, search="", page=1):
         """
         Returns dict containing domain id and name
         """
 
         # get domain list
         resource = self._network.open("https://ccp.netcup.net/run/domains_ajax.php?suchstrg=" + quote_plus(search) + "&action=listdomains&seite=" + str(page) + "&sessionhash=" + self._sessionhash + "&nocsrftoken=" + self._nocsrftoken)
-        content = gzip.decompress(resource.read()).decode(resource.headers.get_content_charset())
+        content = decompress(resource.read()).decode(resource.headers.get_content_charset())
         self.__getTokens(content)
-        self._log("Received domain list")
 
         # parse list
-        domain_id = re.findall(r"showDomainsDetails\((.*?)\);", content)
-        domain_name = re.findall(r"<td>([a-zA-Z0-9-_\.äöüß]+?)\s", content)
+        domain_id = findall(r"showDomainsDetails\((.*?)\);", content)
+        domain_name = findall(r"<td>([a-zA-Z0-9-_\.äöüß]+?)\s", content)
         ret = {}
 
         # generate response
@@ -159,9 +150,8 @@ class CCPConnection(object):
 
         # get domain info
         resource = self._network.open("https://ccp.netcup.net/run/domains_ajax.php?domain_id=" + str(domain_id) + "&action=showdomainsdetails&sessionhash=" + self._sessionhash + "&nocsrftoken=" + self._nocsrftoken)
-        content = gzip.decompress(resource.read()).decode(resource.headers.get_content_charset())
+        content = decompress(resource.read()).decode(resource.headers.get_content_charset())
         self.__getTokens(content)
-        self._log("Received domain details")
 
         # parse html
         soup = BeautifulSoup(content, "html.parser")
@@ -197,7 +187,7 @@ class CCPConnection(object):
         return domain_obj
 
 
-    def saveDomain(self, domain_id, domain_obj):
+    def saveDomain(self, domain_obj):
         """
         Saves domain object on netcup
         """
@@ -207,31 +197,30 @@ class CCPConnection(object):
             return True
 
         # create post payload
-        payload = {"dnssecenabled":                     str(not domain_obj.getDNSSEC()).lower(),
-                   "zone":                              domain_obj._name,
-                   "zoneid":                            domain_obj._zone,
-                   "serial":                            domain_obj._serial,
-                   "order":                             "",
-                   "formchanged":                       "",
-                   "restoredefaults_" + str(domain_id): "false",
-                   "submit":                            "DNS Records speichern"}
+        payload = {"dnssecenabled": str(not domain_obj.getDNSSEC()).lower(),
+                   "zone":          domain_obj._name,
+                   "zoneid":        domain_obj._zone,
+                   "serial":        domain_obj._serial,
+                   "order":         "",
+                   "formchanged":   "",
+                   "restoredefaults_" + str(domain_obj._id): "false",
+                   "submit":        "DNS Records speichern"}
 
         # add dns records to payload
         for key, value in domain_obj.getAllRecords().items():
             payload[key + "[host]"] = value["host"]
             payload[key + "[type]"] = value["type"]
-            payload[key + "[pri]"] = value["pri"]
+            payload[key + "[pri]"]  = value["pri"]
             payload[key + "[destination]"] = value["destination"]
             if "delete" in value:
                 payload[key + "[delete]"] = value["delete"]
 
         # send update
         payload = urlencode(payload)
-        resource = self._network.open("https://ccp.netcup.net/run/domains_ajax.php?action=editzone&domain_id=" + str(domain_id) + "&sessionhash=" + self._sessionhash + "&nocsrftoken=" + self._nocsrftoken,
+        resource = self._network.open("https://ccp.netcup.net/run/domains_ajax.php?action=editzone&domain_id=" + str(domain_obj._id) + "&sessionhash=" + self._sessionhash + "&nocsrftoken=" + self._nocsrftoken,
                                       payload.encode("utf-8"))
-        content = gzip.decompress(resource.read()).decode(resource.headers.get_content_charset())
+        content = decompress(resource.read()).decode(resource.headers.get_content_charset())
         self.__getTokens(content)
-        self._log("DNS records saved")
         return True
 
 
@@ -242,9 +231,8 @@ class CCPConnection(object):
 
         # get domain info
         resource = self._network.open("https://ccp.netcup.net/run/domains_ajax.php?domain_id=" + str(domain_id) + "&action=showdomainsdetails&sessionhash=" + self._sessionhash + "&nocsrftoken=" + self._nocsrftoken)
-        content = gzip.decompress(resource.read()).decode(resource.headers.get_content_charset())
+        content = decompress(resource.read()).decode(resource.headers.get_content_charset())
         self.__getTokens(content)
-        self._log("Received domain details")
 
         if "<td>yes</td>" in content:
             return True
@@ -257,18 +245,15 @@ class CCPConnection(object):
         Retrieves session and csrf token
         """
         try:
-            self._sessionhash = re.search(r"sessionhash = \"(.*?)\";", html).group(1)
-            self._log("sessionhash: " + self._sessionhash)
+            self._sessionhash = search(r"sessionhash = \"(.*?)\";", html).group(1)
         except AttributeError:
             pass
 
         try:
-            self._nocsrftoken = re.search(r"nocsrftoken = \"(.*?)\";", html).group(1)
-            self._log("nocsrftoken: " + self._nocsrftoken)
+            self._nocsrftoken = search(r"nocsrftoken = \"(.*?)\";", html).group(1)
         except AttributeError:
             try:
-                self._nocsrftoken = re.search(r"nocsrftoken = '(.*?)';", html).group(1)
-                self._log("nocsrftoken: " + self._nocsrftoken)
+                self._nocsrftoken = search(r"nocsrftoken = '(.*?)';", html).group(1)
             except AttributeError:
                 pass
 
@@ -280,13 +265,4 @@ class CCPConnection(object):
 
         # request token
         resource = self._network.open("https://ccp.netcup.net/run/nocrfs_ajax.php?&action=getnocsrftoken&sessionhash=" + self._sessionhash)
-        self._nocsrftoken = gzip.decompress(resource.read()).decode(resource.headers.get_content_charset())
-        self._log("nocsrftoken: " + self._nocsrftoken)
-
-
-    def _log(self, msg):
-        """
-        Prints debug messages
-        """
-        if self._debug:
-            print(msg)
+        self._nocsrftoken = decompress(resource.read()).decode(resource.headers.get_content_charset())

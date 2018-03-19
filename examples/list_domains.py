@@ -16,17 +16,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import netcup
 
 
-# start api connection
-ccp = netcup.dns.CCPConnection(cachepath="mysession", debug=False)
-ccp.start(username="<CCP NAME>", password="<CCP PASSWORD>")
+# connect to cpp
+ccp = netcup.CCPConnection(cachepath="mysession")
+ccp.start(username = "<CCP LOGIN>",
+          password = "<CCP PASSWORD>")
 
-# print all domains
+# print all domains and keys
 for key, value in ccp.getAllDomains().items():
     print(key + ": " + value)
 

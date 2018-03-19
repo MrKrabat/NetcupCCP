@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import copy
+
 
 class CCPDomain(object):
     """
@@ -42,7 +44,7 @@ class CCPDomain(object):
         Returns dict containing all resource records
         """
 
-        return self._rr
+        return copy.deepcopy(self._rr)
 
 
     def getRecord(self, rr_id):
@@ -50,10 +52,13 @@ class CCPDomain(object):
         Returns resource record for id
         """
 
-        return self._rr.get(rr_id, False)
+        if rr_id in self._rr:
+            return copy.deepcopy(self._rr[rr_id])
+        else:
+            return False
 
 
-    def setRecord(self, rr_id, rr_host, rr_type, rr_destination, rr_pri=0):
+    def setRecord(self, rr_id, rr_host=None, rr_type=None, rr_destination=None, rr_pri=None):
         """
         Sets resource record data for existing entry
         """
@@ -64,10 +69,18 @@ class CCPDomain(object):
 
         # update values
         self._changed = True
-        self._rr[rr_id]["host"] = rr_host
-        self._rr[rr_id]["type"] = rr_type
-        self._rr[rr_id]["pri"] = rr_pri
-        self._rr[rr_id]["destination"] = rr_destination
+        if rr_host:
+            self._rr[rr_id]["host"] = rr_host
+
+        if rr_type:
+            self._rr[rr_id]["type"] = rr_type
+
+        if rr_pri:
+            self._rr[rr_id]["pri"] = rr_pri
+
+        if rr_destination:
+            self._rr[rr_id]["destination"] = rr_destination
+
         return True
 
 

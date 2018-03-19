@@ -23,7 +23,7 @@ import netcup
 
 '''
 Certbot command:
-certbot certonly --manual --preferred-challenges=dns --manual-auth-hook /root/certbot/authenticator.py --manual-cleanup-hook /root/certbot/cleanup.py -d *.domain.tld -d domain.tld
+certbot certonly --manual --preferred-challenges=dns --manual-auth-hook authenticator.py --manual-cleanup-hook cleanup.py -d *.domain.tld -d domain.tld
 '''
 
 def getNetcupDomain(fqdn):
@@ -46,16 +46,17 @@ def getDomainID(fqdn):
             return key
 
 
-# start api connection
-ccp = netcup.dns.CCPConnection(cachepath="/root/certbot/mysession")
-ccp.start(username="<CCP NAME>", password="<CCP PASSWORD>")
+# connect to cpp
+ccp = netcup.CCPConnection(cachepath="mysession")
+ccp.start(username = "<CCP LOGIN>",
+          password = "<CCP PASSWORD>")
 
-# data
-DOMAIN_LIST    = {"<DOMAIN ID>": "<DOMAIN NAME>", "<DOMAIN ID2>": "<DOMAIN NAME2>"}
+# get data
+DOMAIN_LIST    = {"000001": "domain1.tld", "000002": "domain2.tld"} # list of all netcup domains + keys
 DOMAIN_ID      = getDomainID(os.environ["CERTBOT_DOMAIN"])
 CERTBOT_DOMAIN = getNetcupDomain(os.environ["CERTBOT_DOMAIN"])
 
-# load domain data
+# get domain infos
 mydomain = ccp.getDomain(DOMAIN_ID)
 
 # cleanup old dns challenge
@@ -63,10 +64,10 @@ for key, value in mydomain.searchRecord(rr_host=CERTBOT_DOMAIN, rr_type="TXT").i
     mydomain.removeRecord(key)
 
 # save changes
-ccp.saveDomain(DOMAIN_ID, mydomain)
+ccp.saveDomain(mydomain)
 
 # cleanup
 ccp.close()
 
-# wait 1 minute for changes to take effect
-time.sleep(60)
+# wait 10 seconds for changes to take effect
+time.sleep(10)

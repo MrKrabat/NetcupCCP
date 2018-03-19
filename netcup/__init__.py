@@ -16,11 +16,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""
-This package contains a Python API for netcup dns settings.
-"""
+'''
+This package contains a python3 API for netcup dns settings.
+'''
 
 try:
-    import dns
+    from ccp import CCPConnection
+    from exception import *
 except ImportError:
-    from . import dns
+    from .ccp import CCPConnection
+    from .exception import *

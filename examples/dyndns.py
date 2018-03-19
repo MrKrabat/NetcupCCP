@@ -16,32 +16,23 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import netcup
 
 
-# start api connection
-ccp = netcup.dns.CCPConnection(cachepath="mysession", debug=False)
-ccp.start(username="<CCP NAME>", password="<CCP PASSWORD>")
+# connect to cpp
+ccp = netcup.CCPConnection(cachepath="mysession")
+ccp.start(username = "<CCP LOGIN>",
+          password = "<CCP PASSWORD>")
 
 # get domain infos
-mydomain = ccp.getDomain("<CCP DOMAIN ID>")
+mydomain = ccp.getDomain("<DOMAIN ID>")
 
-# check if exists
-dyndns = mydomain.searchRecord("dyndns", "A")
-
-if not dyndns:
-    # add record
-    mydomain.addRecord("dyndns", "A", "<NEW IPv4>")
-else:
-    # update record
-    # assuming we only have one record
-    mydomain.setRecord(list(dyndns.keys())[0], "dyndns", "A", "<NEW IPv4>")
+# update record
+mydomain.setRecord(rr_id          = "<RR ID>",
+                   rr_destination = "<NEW IPv4>")
 
 # save changes
-ccp.saveDomain("<CCP DOMAIN ID>", mydomain)
+ccp.saveDomain(mydomain)
 
 # cleanup
 ccp.close()
