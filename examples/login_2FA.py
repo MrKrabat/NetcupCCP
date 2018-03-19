@@ -29,7 +29,7 @@ ccp.start(username  = "<CCP LOGIN>",
           token_2FA = totp.now())
 
 # print all domains and keys
-for key, value in ccp.getAllDomains().items():
+for key, value in ccp.getDomainList().items():
     print(key + ": " + value)
 
 # cleanup
