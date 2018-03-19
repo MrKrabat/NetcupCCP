@@ -237,6 +237,23 @@ class CCPConnection(object):
         return True
 
 
+    def isRecordLive(self, domain_id):
+        """
+        Checks if domain dns records are live
+        """
+
+        # get domain info
+        resource = self._network.open("https://ccp.netcup.net/run/domains_ajax.php?domain_id=" + str(domain_id) + "&action=showdomainsdetails&sessionhash=" + self._sessionhash + "&nocsrftoken=" + self._nocsrftoken)
+        content = gzip.decompress(resource.read()).decode(resource.headers.get_content_charset())
+        self.__getTokens(content)
+        self._log("Received domain details")
+
+        if "<td>yes</td>" in content:
+            return True
+        else:
+            return False
+
+
     def __getTokens(self, html):
         """
         Retrieves session and csrf token

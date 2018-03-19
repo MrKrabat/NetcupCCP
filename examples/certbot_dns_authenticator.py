@@ -21,10 +21,10 @@ import time
 
 import netcup
 
-"""
+'''
 Certbot command:
 certbot certonly --manual --preferred-challenges=dns --manual-auth-hook /root/certbot/authenticator.py --manual-cleanup-hook /root/certbot/cleanup.py -d *.domain.tld -d domain.tld
-"""
+'''
 
 def getNetcupDomain(fqdn):
     """
@@ -35,8 +35,8 @@ def getNetcupDomain(fqdn):
             return "_acme-challenge"
         elif value in fqdn:
             return "_acme-challenge." + fqdn[:-(len(value)+1)]
-            
-            
+
+
 def getDomainID(fqdn):
     """
     Returns domain id
@@ -65,8 +65,13 @@ mydomain.addRecord(CERTBOT_DOMAIN, "TXT", CERTBOT_VALIDATION)
 # save changes
 ccp.saveDomain(DOMAIN_ID, mydomain)
 
+# wait for changes to take effect
+timer = time.time() + 15*60
+while True:
+    time.sleep(60)
+    # check if settings are live or timeout reached
+    if ccp.isRecordLive(DOMAIN_ID) or time.time() > timer:
+        break
+
 # cleanup
 ccp.close()
-
-# wait 5 minutes for changes to take effect
-time.sleep(5*60)
