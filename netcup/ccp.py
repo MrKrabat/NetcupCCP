@@ -37,14 +37,13 @@ class CCPConnection(object):
     Netcup CCP API
     """
 
-    def __init__(self, cachepath=None, debug=False):
+    def __init__(self, cachepath=None):
         """
         Creates CCP connection
         """
         self._cache = False
         self._sessionhash = None
         self._nocsrftoken = None
-        self._debug = debug
 
         # creates urllib with custom headers and cookie management
         self._jar = LWPCookieJar()
