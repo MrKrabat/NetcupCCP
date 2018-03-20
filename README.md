@@ -5,27 +5,27 @@
 **Requirements:**
 - Python3
 - Beautifulsoup4 `apt-get install python3-bs4`
-- [Python One-Time Password Library for 2FA](https://github.com/pyotp/pyotp)
+- (optional) [Python One-Time Password Library](https://github.com/pyotp/pyotp) for 2FA
 
 **WARNING: Use at your own risk!**
 ***
 
 **Features:**
-- [x] CCP login
-- [x] 2FA supported
+- [x] Netcup CPP login
+- [x] Login with 2FA
 - [x] Session caching
-- [x] List and filter all domains
-- [x] Get all resource records of domain
+- [x] Get all domains
+- [x] Filter domains
+- [x] Get all resource records of an domain
 - [x] Add/remove/change records
 - [x] Search for records
-- [x] Set/get DNSSEC state
+- [x] Change DNSSEC state
+- [x] Check if changed resource records are live
 - [x] Save changes
 
 
 **Missing features:**
-- [ ] Error handling
-- [ ] Input validation
-- [ ] Using own nameservers
+- [ ] Own nameserver
 - [ ] Any other feature that domains have at netcup
 ***
 

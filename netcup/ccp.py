@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 from re import search, findall
 from bs4 import BeautifulSoup
 from gzip import decompress
@@ -41,24 +42,32 @@ class CCPConnection(object):
         """
         Creates CCP connection
         """
-        self._cache = False
-        self._sessionhash = None
-        self._nocsrftoken = None
+        self.__cache = False
+        self.__sessionhash = None
+        self.__nocsrftoken = None
 
         # creates urllib with custom headers and cookie management
-        self._jar = LWPCookieJar()
-        self._network = build_opener(HTTPCookieProcessor(self._jar))
-        self._network.addheaders = [("User-Agent",      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36 Edge/16.16299"),
-                                    ("Accept-Encoding", "gzip, deflate, br"),
-                                    ("Accept",          "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")]
+        self.__jar = LWPCookieJar()
+        self.__network = build_opener(HTTPCookieProcessor(self.__jar))
+        self.__network.addheaders = [("User-Agent",      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36 Edge/16.16299"),
+                                     ("Accept-Encoding", "gzip, deflate, br"),
+                                     ("Accept",          "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")]
 
         # load session cache from disk
         if cachepath:
-            self._cache = True
-            self._cachepath = cachepath
+            # check if path is writeable
+            path = os.path.dirname(cachepath)
+            if not path:
+                path = "."
+
+            if not os.access(path, os.W_OK):
+                raise IOError("cachepath is not writeable")
+
+            self.__cache = True
+            self.__cachepath = cachepath
             # load cookies
             try:
-                self._jar.load(cachepath, ignore_discard=True)
+                self.__jar.load(cachepath, ignore_discard=True)
             except IOError:
                 # cookie file does not exist
                 pass
@@ -69,9 +78,17 @@ class CCPConnection(object):
         Performs login if session is invalid
         """
 
+        # check if arguments are strings
+        if not isinstance(username, str):
+            username = str(username)
+        if not isinstance(password, str):
+            password = str(password)
+        if token_2FA and not isinstance(token_2FA, str):
+            token_2FA = str(token_2FA)
+
         # validate cached session
-        if self._cache:
-            resource = self._network.open("https://ccp.netcup.net/run/domains.php")
+        if self.__cache:
+            resource = self.__network.open("https://ccp.netcup.net/run/domains.php")
             content = decompress(resource.read()).decode(resource.headers.get_content_charset())
             if username in content:
                 self.__getTokens(content)
@@ -89,25 +106,29 @@ class CCPConnection(object):
         if token_2FA:
             payload.pop("ccp_password", False)
             payload["pwdb64"] = b64encode(password.encode("ascii"))
-            payload["tan"] = str(token_2FA)
+            payload["tan"]    = token_2FA
 
         # send login
         payload = urlencode(payload)
-        resource = self._network.open("https://ccp.netcup.net/run/start.php", payload.encode("utf-8"))
+        resource = self.__network.open("https://ccp.netcup.net/run/start.php", payload.encode("utf-8"))
         content = decompress(resource.read()).decode(resource.headers.get_content_charset())
 
         # check if login successful
         if username in content:
-            resource = self._network.open("https://ccp.netcup.net/run/domains.php")
+            resource = self.__network.open("https://ccp.netcup.net/run/domains.php")
             content = decompress(resource.read()).decode(resource.headers.get_content_charset())
             self.__getTokens(content)
 
-            if not self._sessionhash or not self._nocsrftoken:
-                raise NetcupLoginError()
+            # check tokens
+            if not self.__sessionhash or not self.__nocsrftoken:
+                if token_2FA:
+                    raise CCPLoginError("2FA token invalid")
+                else:
+                    raise CCPLoginError("Your account has 2FA enabled")
 
             return True
         else:
-            raise NetcupLoginError()
+            raise CCPLoginError("Login failed check your credentials")
 
 
     def close(self):
@@ -116,12 +137,13 @@ class CCPConnection(object):
         """
 
         # check if caching is enabled
-        if self._cache:
+        if self.__cache:
             # save session
-            self._jar.save(self._cachepath, ignore_discard=True)
+            self.__jar.save(self.__cachepath, ignore_discard=True)
         else:
             # logout
-            self._network.open("https://ccp.netcup.net/run/logout.php")
+            resource = self.__network.open("https://ccp.netcup.net/run/logout.php")
+            content = decompress(resource.read()).decode(resource.headers.get_content_charset())
 
 
     def getDomainList(self, search="", page=1):
@@ -130,20 +152,27 @@ class CCPConnection(object):
         """
 
         # get domain list
-        resource = self._network.open("https://ccp.netcup.net/run/domains_ajax.php?suchstrg=" + quote_plus(search) + "&action=listdomains&seite=" + str(page) + "&sessionhash=" + self._sessionhash + "&nocsrftoken=" + self._nocsrftoken)
+        resource = self.__network.open("https://ccp.netcup.net/run/domains_ajax.php?suchstrg=" + quote_plus(search) + "&action=listdomains&seite=" + str(page) + "&sessionhash=" + self.__sessionhash + "&nocsrftoken=" + self.__nocsrftoken)
         content = decompress(resource.read()).decode(resource.headers.get_content_charset())
         self.__getTokens(content)
+
+        # check if domains found
+        if "Es wurden keine Domains zu ihrer Suche nach" in content or "Sie haben keine Domains gebucht" in content:
+            return {}
 
         # parse list
         domain_id = findall(r"showDomainsDetails\((.*?)\);", content)
         domain_name = findall(r"<td>([a-zA-Z0-9-_\.äöüß]+?)\s", content)
-        ret = {}
 
-        # generate response
-        for i in range(len(domain_id)):
-            ret[domain_id[i]] = domain_name[i]
+        # check result
+        if not domain_id or not domain_name:
+            raise CCPWebsiteChanges("Could not find domains and keys")
+        # check if len equals
+        if not len(domain_id) == len(domain_name):
+            raise CCPWebsiteChanges("Number of domains does not match number of keys")
 
-        return ret
+        # return dict
+        return dict(zip(domain_id, domain_name))
 
 
     def getDomain(self, domain_id):
@@ -152,36 +181,48 @@ class CCPConnection(object):
         """
 
         # get domain info
-        resource = self._network.open("https://ccp.netcup.net/run/domains_ajax.php?domain_id=" + str(domain_id) + "&action=showdomainsdetails&sessionhash=" + self._sessionhash + "&nocsrftoken=" + self._nocsrftoken)
+        resource = self.__network.open("https://ccp.netcup.net/run/domains_ajax.php?domain_id=" + str(domain_id) + "&action=showdomainsdetails&sessionhash=" + self.__sessionhash + "&nocsrftoken=" + self.__nocsrftoken)
         content = decompress(resource.read()).decode(resource.headers.get_content_charset())
         self.__getTokens(content)
 
         # parse html
         soup = BeautifulSoup(content, "html.parser")
         div = soup.find("div", {"id": "domainsdetail_detail_dns_" + str(domain_id)})
+        if not div:
+            raise CCPWebsiteChanges("Could not get DNS tab")
+
         table = div.find_all("table")
+        if not table:
+            raise CCPWebsiteChanges("Could not get RR table")
 
-        # table[0] contains Zone/Serial/DNSSEC state
-        dnssec = True if "checked" in str(div.find("input", {"id": "dnssecenabled_" + str(domain_id)})) else False
-        domain_obj = CCPDomain(domain_id     = domain_id,
-                               domain_name   = div.find("input", {"name": "zone"}).get("value"),
-                               domain_zone   = div.find("input", {"name": "zoneid"}).get("value"),
-                               domain_serial = div.find("input", {"name": "serial"}).get("value"),
-                               domain_dnssec = dnssec)
+        # create CCPDomain object
+        try:
+            dnssec = True if "checked" in str(div.find("input", {"id": "dnssecenabled_" + str(domain_id)})) else False
+            domain_obj = CCPDomain(domain_id     = domain_id,
+                                   domain_name   = div.find("input", {"name": "zone"}).get("value"),
+                                   domain_zone   = div.find("input", {"name": "zoneid"}).get("value"),
+                                   domain_serial = div.find("input", {"name": "serial"}).get("value"),
+                                   domain_dnssec = dnssec)
+        except (AttributeError, TypeError) as e:
+            raise CCPWebsiteChanges("Could not get domain infos")
 
-        # for very dns entry
+        # for every dns entry
         for row in table[1].find_all("tr")[1:-2]:
             column = row.find_all("td")
 
             # get values
-            rr_host = column[0].input.get("value")
-            rr_pri = column[2].input.get("value")
-            rr_destination = column[3].input.get("value")
-            rr_type = "Error"
-            for option in column[1].find_all("option"):
-                if option.get("selected"):
-                    rr_type = option.get("value")
-                    break
+            try:
+                rr_host = column[0].input.get("value")
+                rr_pri = column[2].input.get("value")
+                rr_destination = column[3].input.get("value")
+                rr_type = ""
+
+                for option in column[1].find_all("option"):
+                    if option.get("selected"):
+                        rr_type = option.get("value")
+                        break
+            except (AttributeError, TypeError, KeyError) as e:
+                raise CCPWebsiteChanges("Could not get RR row")
 
             # if record contain values
             if rr_host:
@@ -195,35 +236,55 @@ class CCPConnection(object):
         Saves domain object on netcup
         """
 
+        # check if domain_obj is CCPDomain
+        if not isinstance(domain_obj, CCPDomain):
+            raise TypeError("Object of type CCPDomain expected")
+
         # check if object changed
-        if not domain_obj._changed:
+        if not domain_obj.hasChanged():
             return True
 
         # create post payload
         payload = {"dnssecenabled": str(not domain_obj.getDNSSEC()).lower(),
-                   "zone":          domain_obj._name,
-                   "zoneid":        domain_obj._zone,
-                   "serial":        domain_obj._serial,
+                   "zone":          domain_obj.getDomainName(),
+                   "zoneid":        domain_obj.getDomainZone(),
+                   "serial":        domain_obj.getDomainSerial(),
                    "order":         "",
                    "formchanged":   "",
-                   "restoredefaults_" + str(domain_obj._id): "false",
+                   "restoredefaults_" + domain_obj.getDomainID(): "false",
                    "submit":        "DNS Records speichern"}
 
         # add dns records to payload
         for key, value in domain_obj.getAllRecords().items():
-            payload[key + "[host]"] = value["host"]
-            payload[key + "[type]"] = value["type"]
-            payload[key + "[pri]"]  = value["pri"]
-            payload[key + "[destination]"] = value["destination"]
-            if "delete" in value:
-                payload[key + "[delete]"] = value["delete"]
+            try:
+                payload[key + "[host]"] = value["host"]
+                payload[key + "[type]"] = value["type"]
+                payload[key + "[pri]"]  = value["pri"]
+                payload[key + "[destination]"] = value["destination"]
+                if "delete" in value:
+                    payload[key + "[delete]"] = value["delete"]
+            except KeyError:
+                raise ValueError("Invalid CCPDomain object")
 
         # send update
         payload = urlencode(payload)
-        resource = self._network.open("https://ccp.netcup.net/run/domains_ajax.php?action=editzone&domain_id=" + str(domain_obj._id) + "&sessionhash=" + self._sessionhash + "&nocsrftoken=" + self._nocsrftoken,
+        resource = self.__network.open("https://ccp.netcup.net/run/domains_ajax.php?action=editzone&domain_id=" + domain_obj.getDomainID() + "&sessionhash=" + self.__sessionhash + "&nocsrftoken=" + self.__nocsrftoken,
                                       payload.encode("utf-8"))
         content = decompress(resource.read()).decode(resource.headers.get_content_charset())
         self.__getTokens(content)
+
+        # check if update was successful
+        if not "Eintrag erfolgreich!" in content:
+            raise CCPSaveDomainError("Could not save domain")
+
+        # parse html
+        soup = BeautifulSoup(content, "html.parser")
+        try:
+            # update domain serial
+            domain_obj.setDomainSerial(soup.find("input", {"name": "serial"}).get("value"))
+        except (AttributeError, TypeError) as e:
+            raise CCPWebsiteChanges("Could not get domain serial")
+
         return True
 
 
@@ -233,7 +294,7 @@ class CCPConnection(object):
         """
 
         # get domain info
-        resource = self._network.open("https://ccp.netcup.net/run/domains_ajax.php?domain_id=" + str(domain_id) + "&action=showdomainsdetails&sessionhash=" + self._sessionhash + "&nocsrftoken=" + self._nocsrftoken)
+        resource = self.__network.open("https://ccp.netcup.net/run/domains_ajax.php?domain_id=" + str(domain_id) + "&action=showdomainsdetails&sessionhash=" + self.__sessionhash + "&nocsrftoken=" + self.__nocsrftoken)
         content = decompress(resource.read()).decode(resource.headers.get_content_charset())
         self.__getTokens(content)
 
@@ -247,18 +308,23 @@ class CCPConnection(object):
         """
         Retrieves session and csrf token
         """
+
+        # check session
+        if "Your session has expired" in html:
+            raise CCPSessionExpired("CCP session expired")
+
         try:
-            self._sessionhash = search(r"sessionhash = \"(.*?)\";", html).group(1)
+            self.__sessionhash = search(r"sessionhash = \"(.*?)\";", html).group(1)
         except AttributeError:
             pass
 
         try:
-            self._nocsrftoken = search(r"nocsrftoken = \"(.*?)\";", html).group(1)
+            self.__nocsrftoken = search(r"nocsrftoken = \"(.*?)\";", html).group(1)
         except AttributeError:
             try:
-                self._nocsrftoken = search(r"nocsrftoken = '(.*?)';", html).group(1)
+                self.__nocsrftoken = search(r"nocsrftoken = '(.*?)';", html).group(1)
             except AttributeError:
-                pass
+                self.__getNewCSRF()
 
 
     def __getNewCSRF(self):
@@ -267,5 +333,8 @@ class CCPConnection(object):
         """
 
         # request token
-        resource = self._network.open("https://ccp.netcup.net/run/nocrfs_ajax.php?&action=getnocsrftoken&sessionhash=" + self._sessionhash)
-        self._nocsrftoken = decompress(resource.read()).decode(resource.headers.get_content_charset())
+        resource = self.__network.open("https://ccp.netcup.net/run/nocrfs_ajax.php?&action=getnocsrftoken&sessionhash=" + self.__sessionhash)
+        self.__nocsrftoken = decompress(resource.read()).decode(resource.headers.get_content_charset())
+
+        if "Your session has expired" in self.__nocsrftoken:
+            raise CCPSessionExpired("CCP session expired")

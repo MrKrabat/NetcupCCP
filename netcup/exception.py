@@ -17,17 +17,36 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-class NetcupError(Exception):
+class CCPError(Exception):
     """
-    This is the base class for all exceptions in this package.
+    This is the base class for all exceptions in this package
     """
+    pass
 
 
-class NetcupLoginError(NetcupError):
+class CCPLoginError(CCPError):
     """
-    Raised, if login failed.
+    Raised, if login failed
     """
+    pass
 
-    def __str__(self):
-        tmp = "Could not login to Netcup CCP."
-        return tmp
+
+class CCPSessionExpired(CCPError):
+    """
+    Raised, if session expired
+    """
+    pass
+
+
+class CCPWebsiteChanges(CCPError):
+    """
+    Raised, if website parsing failed
+    """
+    pass
+
+
+class CCPSaveDomainError(CCPError):
+    """
+    Raised, if failed to save domain
+    """
+    pass
