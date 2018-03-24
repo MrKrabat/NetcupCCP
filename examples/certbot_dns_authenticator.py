@@ -17,9 +17,11 @@ Certbot command:
 certbot certonly --manual --preferred-challenges=dns --manual-auth-hook authenticator.py --manual-cleanup-hook cleanup.py -d *.domain.tld -d domain.tld
 
 - chmod +x for both scripts
-- Path to the hooks should be absolute
+- Paths to the hooks have to be absolute
 - Wildcard certificates require certbot 0.22
-- It takes approximately 10 Minutes per Domain for verifying
+- Wildcard certificates requere ACMEv2, add argument --server https://acme-v02.api.letsencrypt.org/directory
+- It takes approximately 10 minutes per domain for verifying
+- Will only work if all domains in CSR are from one netcup account
 '''
 
 # certbot arguments
