@@ -15,57 +15,62 @@ import netcup
 '''
 Certbot command:
 certbot certonly --manual --preferred-challenges=dns --manual-auth-hook authenticator.py --manual-cleanup-hook cleanup.py -d *.domain.tld -d domain.tld
+
+- chmod +x for both scripts
+- Path to the hooks should be absolute
+- Wildcard certificates require certbot 0.22
+- It takes approximately 10 Minutes per Domain for verifying
 '''
 
-def getNetcupDomain(fqdn):
-    """
-    Returns domainname for netcup ccp
-    """
-    for key, value in DOMAIN_LIST.items():
-        if value == fqdn or "*." + value == fqdn:
-            return "_acme-challenge"
-        elif value in fqdn:
-            return "_acme-challenge." + fqdn[:-(len(value)+1)]
-
-
-def getDomainID(fqdn):
-    """
-    Returns domain id
-    """
-    for key, value in DOMAIN_LIST.items():
-        if value in fqdn:
-            return key
-
+# certbot arguments
+CERTBOT_DOMAIN  = os.environ["CERTBOT_DOMAIN"]
+CERTBOT_VALIDATION = os.environ["CERTBOT_VALIDATION"]
 
 # connect to cpp
 ccp = netcup.CCPConnection(cachepath="mysession")
 ccp.start(username = "<CCP LOGIN>",
           password = "<CCP PASSWORD>")
 
-# get data
-DOMAIN_LIST        = {"000001": "domain1.tld", "000002": "domain2.tld"} # list of all netcup domains + keys
-DOMAIN_ID          = getDomainID(os.environ["CERTBOT_DOMAIN"])
-CERTBOT_DOMAIN     = getNetcupDomain(os.environ["CERTBOT_DOMAIN"])
-CERTBOT_VALIDATION = os.environ["CERTBOT_VALIDATION"]
+# get domain_id
+for key, value in ccp.getDomainList(search=CERTBOT_DOMAIN if CERTBOT_DOMAIN.count(".") == 1 else ".".join(CERTBOT_DOMAIN.split(".")[-2:])).items():
+    if value in CERTBOT_DOMAIN:
+        DOMAIN_ID = key
+        DOMAIN_NAME = value
+        break
+
+# check if domain_id found
+if not DOMAIN_ID:
+    raise Exception("Could not find domain in ccp")
+
+# get hostname
+if DOMAIN_NAME == CERTBOT_DOMAIN or "*." + DOMAIN_NAME == CERTBOT_DOMAIN:
+    DOMAIN_HOST = "_acme-challenge"
+elif DOMAIN_NAME in CERTBOT_DOMAIN:
+    DOMAIN_HOST = "_acme-challenge." + CERTBOT_DOMAIN[:-(len(DOMAIN_NAME)+1)]
+else:
+    # failed to generate hostname
+    raise Exception("Could not get Hostname")
 
 # get domain infos
 mydomain = ccp.getDomain(DOMAIN_ID)
 
-# add acme challenge
-mydomain.addRecord(rr_host        = CERTBOT_DOMAIN,
-                   rr_type        = "TXT",
-                   rr_destination = CERTBOT_VALIDATION)
+# deploy dns key
+if __name__ == "__main__":
+    # add acme challenge
+    mydomain.addRecord(rr_host        = DOMAIN_HOST,
+                       rr_type        = "TXT",
+                       rr_destination = CERTBOT_VALIDATION)
 
-# save changes
-ccp.saveDomain(mydomain)
+    # save changes
+    ccp.saveDomain(mydomain)
 
-# wait for changes to take effect
-timer = time.time() + 15*60
-while True:
-    time.sleep(60)
-    # check if settings are live or timeout reached
-    if ccp.isRecordLive(DOMAIN_ID) or time.time() > timer:
-        break
+    # wait for changes to take effect
+    timer = time.time() + 15*60
+    while True:
+        time.sleep(60)
+        # check if settings are live or timeout reached
+        if ccp.isRecordLive(DOMAIN_ID) or time.time() > timer:
+            break
 
-# cleanup
-ccp.close()
+    # cleanup
+    ccp.close()
