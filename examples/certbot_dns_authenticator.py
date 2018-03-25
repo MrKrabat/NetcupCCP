@@ -34,7 +34,7 @@ ccp.start(username = "<CCP LOGIN>",
           password = "<CCP PASSWORD>")
 
 # get domain_id
-for key, value in ccp.getDomainList(search=CERTBOT_DOMAIN if CERTBOT_DOMAIN.count(".") == 1 else ".".join(CERTBOT_DOMAIN.split(".")[-2:])).items():
+for key, value in ccp.getDomainList(search=".".join(CERTBOT_DOMAIN.split(".")[-2:])).items():
     if value in CERTBOT_DOMAIN:
         DOMAIN_ID = key
         DOMAIN_NAME = value
