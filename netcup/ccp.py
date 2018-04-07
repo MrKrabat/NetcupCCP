@@ -189,7 +189,7 @@ class CCPConnection(object):
         # create CCPDomain object
         try:
             webhosting = True if "restoredefaultslabel_" + str(domain_id) in str(div) else False
-            dnssec = True if "checked" in str(div.find("input", {"id": "dnssecenabled_" + str(domain_id)})) else False
+            dnssec = True if "checked" in str(div.find("input", {"id": "dnssecenabled_" + str(domain_id)})) else None
             domain_obj = CCPDomain(domain_id         = domain_id,
                                    domain_name       = div.find("input", {"name": "zone"}).get("value"),
                                    domain_zone       = div.find("input", {"name": "zoneid"}).get("value"),
@@ -239,14 +239,17 @@ class CCPConnection(object):
             return True
 
         # create post payload
-        payload = {"dnssecenabled": str(not domain_obj.getDNSSEC()).lower(),
-                   "zone":          domain_obj.getDomainName(),
+        payload = {"zone":          domain_obj.getDomainName(),
                    "zoneid":        domain_obj.getDomainZone(),
                    "serial":        domain_obj.getDomainSerial(),
                    "order":         "",
                    "formchanged":   "",
                    "restoredefaults_" + domain_obj.getDomainID(): "false",
                    "submit":        "DNS Records speichern"}
+
+        # set dnssec state
+        if isinstance(domain_obj.getDNSSEC(), bool):
+            payload["dnssecenabled"] = str(not domain_obj.getDNSSEC()).lower()
 
         # add dns records to payload
         for key, value in domain_obj.getAllRecords().items():

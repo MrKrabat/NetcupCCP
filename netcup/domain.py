@@ -24,8 +24,11 @@ class CCPDomain(object):
         """
 
         # check if domain_dnssec is bool
-        if not isinstance(domain_dnssec, bool):
-            raise TypeError("domain_dnssec of type bool expected")
+        if not isinstance(domain_dnssec, bool) and not domain_dnssec is None:
+            raise TypeError("domain_dnssec of type bool or None expected")
+        # check if domain_webhosting is bool
+        if not isinstance(domain_webhosting, bool):
+            raise TypeError("domain_webhosting of type bool expected")
 
         self.__id         = str(domain_id)
         self.__name       = str(domain_name)
