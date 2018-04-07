@@ -18,7 +18,7 @@ class CCPDomain(object):
     Class holding all informations of a domain
     """
 
-    def __init__(self, domain_id, domain_name, domain_zone, domain_serial, domain_dnssec=True):
+    def __init__(self, domain_id, domain_name, domain_zone, domain_serial, domain_dnssec=True, domain_webhosting=False):
         """
         Creates domain object
         """
@@ -27,14 +27,15 @@ class CCPDomain(object):
         if not isinstance(domain_dnssec, bool):
             raise TypeError("domain_dnssec of type bool expected")
 
-        self.__id       = str(domain_id)
-        self.__name     = str(domain_name)
-        self.__zone     = str(domain_zone)
-        self.__serial   = str(domain_serial)
-        self.__dnssec   = domain_dnssec
-        self.__changed  = False
-        self.__newcount = 0
-        self.__rr       = {}
+        self.__id         = str(domain_id)
+        self.__name       = str(domain_name)
+        self.__zone       = str(domain_zone)
+        self.__serial     = str(domain_serial)
+        self.__dnssec     = domain_dnssec
+        self.__webhosting = domain_webhosting
+        self.__changed    = False
+        self.__newcount   = 0
+        self.__rr         = {}
 
 
     def getAllRecords(self):
@@ -201,6 +202,14 @@ class CCPDomain(object):
 
         self.__serial = str(domain_serial)
         return True
+
+
+    def isWebhosting(self):
+        """
+        Returns True if is webhosting domain
+        """
+
+        return self.__webhosting
 
 
     def hasChanged(self):
