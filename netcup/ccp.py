@@ -188,7 +188,7 @@ class CCPConnection(object):
 
         # create CCPDomain object
         try:
-            webhosting = True if "restoredefaultslabel_" + str(domain_id) in div else False
+            webhosting = True if "restoredefaultslabel_" + str(domain_id) in str(div) else False
             dnssec = True if "checked" in str(div.find("input", {"id": "dnssecenabled_" + str(domain_id)})) else False
             domain_obj = CCPDomain(domain_id         = domain_id,
                                    domain_name       = div.find("input", {"name": "zone"}).get("value"),
@@ -200,7 +200,7 @@ class CCPConnection(object):
             raise CCPWebsiteChanges("Could not get domain infos")
 
         # for every dns entry
-        del_lines = -2 if not webhosting else -3
+        del_lines = -2 if not webhosting else -4
         for row in table[1].find_all("tr")[1:del_lines]:
             column = row.find_all("td")
 
