@@ -9,18 +9,23 @@
 # Wrapper for Letsencrypt acme.sh client
 # save this file in ./acme.sh/dnsapi/dns_netcup.sh
 # set absolute paths to certbot_dns_* below
-# command: acme.sh --issue -d example.com -d *.example.com --dns dns_netcup
+# command: acme.sh --issue -d example.com -d *.example.com --dns dns_netcup --dnssleep 0
 
-# set environment variables
-export CERTBOT_DOMAIN=$2
-export CERTBOT_VALIDATION=$3
 
 # deploy challenge
 dns_netcup_add() {
-    python3 certbot_dns_authenticator.py
+    # set environment variables
+    export CERTBOT_DOMAIN=`echo "$1" | sed 's/_acme-challenge.//'`
+    export CERTBOT_VALIDATION=$2
+
+    python3 /root/certbot/certbot_dns_authenticator.py
 }
 
 # cleanup
 dns_netcup_rm() {
-    python3 certbot_dns_cleanup.py
+    # set environment variables
+    export CERTBOT_DOMAIN=`echo "$1" | sed 's/_acme-challenge.//'`
+    export CERTBOT_VALIDATION=$2
+
+    python3 /root/certbot/certbot_dns_cleanup.py
 }
