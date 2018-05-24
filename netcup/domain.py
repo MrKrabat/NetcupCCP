@@ -18,7 +18,8 @@ class CCPDomain(object):
     Class holding all informations of a domain
     """
 
-    def __init__(self, domain_id, domain_name, domain_zone, domain_serial, domain_dnssec=True, domain_webhosting=False):
+    def __init__(self, domain_id, domain_name, domain_zone, domain_serial, domain_dnssec=True, domain_webhosting=False,
+                 domain_ttl=86400, domain_retry=7200, domain_expire=1209600, domain_refresh=28800):
         """
         Creates domain object
         """
@@ -36,6 +37,10 @@ class CCPDomain(object):
         self.__serial     = str(domain_serial)
         self.__dnssec     = domain_dnssec
         self.__webhosting = domain_webhosting
+        self.__ttl        = int(domain_ttl)
+        self.__retry      = int(domain_retry)
+        self.__expire     = int(domain_expire)
+        self.__refresh    = int(domain_refresh)
         self.__changed    = False
         self.__newcount   = 0
         self.__rr         = {}
@@ -146,6 +151,102 @@ class CCPDomain(object):
 
         self.__changed = True
         self.__dnssec = state
+        return True
+
+
+    def getTTL(self):
+        """
+        Returns domain ttl value
+        """
+
+        return self.__ttl
+
+
+    def setTTL(self, value):
+        """
+        Sets domain ttl value
+        """
+
+        # check if ttl is int
+        if not isinstance(value, int):
+            raise TypeError("value of type int expected")
+        if value < 0:
+            raise ValueError("value has to be positive integer")
+
+        self.__changed = True
+        self.__ttl = value
+        return True
+
+
+    def getRetry(self):
+        """
+        Returns domain retry value
+        """
+
+        return self.__retry
+
+
+    def setRetry(self, value):
+        """
+        Sets domain retry value
+        """
+
+        # check if ttl is int
+        if not isinstance(value, int):
+            raise TypeError("value of type int expected")
+        if value < 0:
+            raise ValueError("value has to be positive integer")
+
+        self.__changed = True
+        self.__retry = value
+        return True
+
+
+    def getExpire(self):
+        """
+        Returns domain expire value
+        """
+
+        return self.__expire
+
+
+    def setExpire(self, value):
+        """
+        Sets domain expire value
+        """
+
+        # check if ttl is int
+        if not isinstance(value, int):
+            raise TypeError("value of type int expected")
+        if value < 0:
+            raise ValueError("value has to be positive integer")
+
+        self.__changed = True
+        self.__expire = value
+        return True
+
+
+    def getRefresh(self):
+        """
+        Returns domain refresh value
+        """
+
+        return self.__refresh
+
+
+    def setRefresh(self, value):
+        """
+        Sets domain refresh value
+        """
+
+        # check if ttl is int
+        if not isinstance(value, int):
+            raise TypeError("value of type int expected")
+        if value < 0:
+            raise ValueError("value has to be positive integer")
+
+        self.__changed = True
+        self.__refresh = value
         return True
 
 

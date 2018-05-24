@@ -195,13 +195,17 @@ class CCPConnection(object):
                                    domain_zone       = div.find("input", {"name": "zoneid"}).get("value"),
                                    domain_serial     = div.find("input", {"name": "serial"}).get("value"),
                                    domain_dnssec     = dnssec,
-                                   domain_webhosting = webhosting)
+                                   domain_webhosting = webhosting,
+                                   domain_ttl        = div.find("input", {"name": "zone_settings_ttl_" + str(domain_id)}).get("value"),
+                                   domain_retry      = div.find("input", {"name": "zone_settings_retry_" + str(domain_id)}).get("value"),
+                                   domain_expire     = div.find("input", {"name": "zone_settings_expire_" + str(domain_id)}).get("value"),
+                                   domain_refresh    = div.find("input", {"name": "zone_settings_refresh_" + str(domain_id)}).get("value"))
         except (AttributeError, TypeError) as e:
             raise CCPWebsiteChanges("Could not get domain infos")
 
         # for every dns entry
         del_lines = -2 if not webhosting else -4
-        for row in table[1].find_all("tr")[1:del_lines]:
+        for row in table[-2].find_all("tr")[1:del_lines]:
             column = row.find_all("td")
 
             # get values
@@ -244,7 +248,11 @@ class CCPConnection(object):
                    "serial":        domain_obj.getDomainSerial(),
                    "order":         "",
                    "formchanged":   "",
-                   "restoredefaults_" + domain_obj.getDomainID(): "false",
+                   "zone_settings_ttl_"     + domain_obj.getDomainID(): domain_obj.getTTL(),
+                   "zone_settings_expire_"  + domain_obj.getDomainID(): domain_obj.getExpire(),
+                   "zone_settings_retry_"   + domain_obj.getDomainID(): domain_obj.getRetry(),
+                   "zone_settings_refresh_" + domain_obj.getDomainID(): domain_obj.getRefresh(),
+                   "restoredefaults_"       + domain_obj.getDomainID(): "false",
                    "submit":        "DNS Records speichern"}
 
         # set dnssec state
