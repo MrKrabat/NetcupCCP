@@ -1,6 +1,10 @@
 # Netcup CCP DNS API
 
+**Please use [Netcups official DNS API](https://www.netcup-wiki.de/wiki/DNS_API) now.**
+***
+
 **[API documentation](https://github.com/MrKrabat/NetcupCCP/wiki)**
+***
 
 **Requirements:**
 - Python3
