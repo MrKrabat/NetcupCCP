@@ -10,7 +10,7 @@
 import copy
 
 
-RR_ALLOWED_TYPES = ["A", "AAAA", "MX", "TXT", "CNAME", "SRV", "NS", "DS", "TLSA", "CAA"]
+RR_ALLOWED_TYPES = ["A", "AAAA", "MX", "TXT", "CNAME", "SRV", "NS", "DS", "TLSA", "CAA", "SSHFP", "SMIMEA", "OPENPGPKEY"]
 
 
 class CCPDomain(object):
